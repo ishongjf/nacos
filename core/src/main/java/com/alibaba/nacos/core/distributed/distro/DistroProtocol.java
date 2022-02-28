@@ -64,7 +64,9 @@ public class DistroProtocol {
             isInitialized = true;
             return;
         }
+        //创建distro节点的同步任务，每5秒同步一次节点数据
         startVerifyTask();
+        //提交一个distro节点的启动数据加载任务
         startLoadTask();
     }
 

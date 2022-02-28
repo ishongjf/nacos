@@ -809,6 +809,7 @@ public class ServiceManager implements RecordListener<Service> {
             //第一次注册是不存在的
             if (!service.getClusterMap().containsKey(instance.getClusterName())) {
                 Cluster cluster = new Cluster(instance.getClusterName(), service);
+                //创建实例的健康检查任务，对持久化的实例进行检查
                 cluster.init();
                 service.getClusterMap().put(instance.getClusterName(), cluster);
                 Loggers.SRV_LOG
