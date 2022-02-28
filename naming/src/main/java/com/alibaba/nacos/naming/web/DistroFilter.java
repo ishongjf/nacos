@@ -54,58 +54,58 @@ import java.util.Map;
  * @author nacos
  */
 public class DistroFilter implements Filter {
-    
+
     private static final int PROXY_CONNECT_TIMEOUT = 2000;
-    
+
     private static final int PROXY_READ_TIMEOUT = 2000;
-    
+
     @Autowired
     private DistroMapper distroMapper;
-    
+
     @Autowired
     private ControllerMethodsCache controllerMethodsCache;
-    
+
     @Autowired
     private DistroTagGenerator distroTagGenerator;
-    
+
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
     }
-    
+
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
             throws IOException, ServletException {
         ReuseHttpServletRequest req = new ReuseHttpServletRequest((HttpServletRequest) servletRequest);
         HttpServletResponse resp = (HttpServletResponse) servletResponse;
-        
+
         String urlString = req.getRequestURI();
-        
+
         if (StringUtils.isNotBlank(req.getQueryString())) {
             urlString += "?" + req.getQueryString();
         }
-        
+
         try {
             Method method = controllerMethodsCache.getMethod(req);
-            
+
             String path = new URI(req.getRequestURI()).getPath();
             if (method == null) {
                 throw new NoSuchMethodException(req.getMethod() + " " + path);
             }
-            
+
             if (!method.isAnnotationPresent(CanDistro.class)) {
                 filterChain.doFilter(req, resp);
                 return;
             }
             String distroTag = distroTagGenerator.getResponsibleTag(req);
-            
+
             if (distroMapper.responsible(distroTag)) {
                 filterChain.doFilter(req, resp);
                 return;
             }
-            
+            //上面部分判断为不是自己负责的实例，下面部分进行转发操作
             // proxy request to other server if necessary:
             String userAgent = req.getHeader(HttpHeaderConsts.USER_AGENT_HEADER);
-            
+
             if (StringUtils.isNotBlank(userAgent) && userAgent.contains(UtilsAndCommons.NACOS_SERVER_HEADER)) {
                 // This request is sent from peer server, should not be redirected again:
                 Loggers.SRV_LOG.error("receive invalid redirect request from peer {}", req.getRemoteAddr());
@@ -113,9 +113,9 @@ public class DistroFilter implements Filter {
                         "receive invalid redirect request from peer " + req.getRemoteAddr());
                 return;
             }
-            
+
             final String targetServer = distroMapper.mapSrv(distroTag);
-            
+
             List<String> headerList = new ArrayList<>(16);
             Enumeration<String> headers = req.getHeaderNames();
             while (headers.hasMoreElements()) {
@@ -123,10 +123,10 @@ public class DistroFilter implements Filter {
                 headerList.add(headerName);
                 headerList.add(req.getHeader(headerName));
             }
-            
+
             final String body = IoUtils.toString(req.getInputStream(), Charsets.UTF_8.name());
             final Map<String, String> paramsValue = HttpClient.translateParameterMap(req.getParameterMap());
-            
+
             RestResult<String> result = HttpClient
                     .request("http://" + targetServer + req.getRequestURI(), headerList, paramsValue, body,
                             PROXY_CONNECT_TIMEOUT, PROXY_READ_TIMEOUT, Charsets.UTF_8.name(), req.getMethod());
@@ -145,11 +145,11 @@ public class DistroFilter implements Filter {
             resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                     "Server failed," + ExceptionUtil.getAllExceptionMsg(e));
         }
-        
+
     }
-    
+
     @Override
     public void destroy() {
-    
+
     }
 }

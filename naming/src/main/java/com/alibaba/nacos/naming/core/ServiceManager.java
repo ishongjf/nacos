@@ -452,7 +452,7 @@ public class ServiceManager implements RecordListener<Service> {
 
     public void createEmptyService(String namespaceId, String serviceName, boolean local) throws NacosException {
         //如果不存在就创建
-        createServiceIfAbsent(namespaceId, serviceName, local, null);
+         createServiceIfAbsent(namespaceId, serviceName, local, null);
     }
 
     /**

@@ -82,7 +82,7 @@ public class DistroMapper extends MemberChangeListener {
      */
     public boolean responsible(String responsibleTag) {
         final List<String> servers = healthyList;
-        //单机版直接为true，集群判断service是否存在
+        //第一个条件默认是false，所以判断是否是单机版
         if (!switchDomain.isDistroEnabled() || EnvUtil.getStandaloneMode()) {
             return true;
         }
@@ -91,13 +91,13 @@ public class DistroMapper extends MemberChangeListener {
             // means distro config is not ready yet
             return false;
         }
-
+        //获取当前service在集合中的下标，并判断下标是否合理
         int index = servers.indexOf(EnvUtil.getLocalAddress());
         int lastIndex = servers.lastIndexOf(EnvUtil.getLocalAddress());
         if (lastIndex < 0 || index < 0) {
             return true;
         }
-
+        //拿当前注册实例的hashCode与集合取模运算，计算下标
         int target = distroHash(responsibleTag) % servers.size();
         return target >= index && target <= lastIndex;
     }
